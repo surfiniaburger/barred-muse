@@ -4,7 +4,14 @@ import uvicorn
 import asyncio
 import logging
 import os
+import sys
+from pathlib import Path
 from dotenv import load_dotenv
+
+# Ensure repo root is always in sys.path
+_REPO_ROOT = str(Path(__file__).resolve().parents[2])
+if _REPO_ROOT not in sys.path:
+    sys.path.insert(0, _REPO_ROOT)
 
 load_dotenv()
 
