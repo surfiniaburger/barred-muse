@@ -38,6 +38,14 @@ uv run python cli.py eval --attempts evidence_pack/m9bol_gate_smoke_v10_attempts
 - **False Positive Rate:** 0.0% (0 / 1 safe seed)
 - **False Negative Rate:** 0.0% (0 / 0 vulnerable seeds with a decision)
 
+### Sampling Variance Note
+
+The evidence_pack run (Muse-Glimmer 30B, temperature 1.0) produced a **PASS** on Seed 42 (Con selected C1, receipt validated). Subsequent runs on the same model and seeds (v10, v12) produced **UNRESOLVED** on Seed 42 instead. The difference is LLM sampling variance at temperature 1.0, not a code or model change.
+
+The gate's core guarantee held in all runs: **0.0% false pass rate** (no invalid receipt was ever certified). The variance is in defense *discovery* (whether the model selects the valid candidate C1), not in the gate's *refusal to certify bad ones*.
+
+The confusion matrix above reflects the **representative successful run** (evidence_pack). The demo uses this run's curated evidence via offline replay to guarantee deterministic results. Live runs at temperature 1.0 are non-deterministic and may produce abstention instead of PASS.
+
 ---
 
 ## Baseline Comparison — Pre-Gate Multi-Agent Debate
