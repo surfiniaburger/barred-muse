@@ -60,7 +60,7 @@ mirai --model trymirai/Muse-Glimmer-30B-M
 #### Terminal 2 — Start Uzu OpenAI-Compatible Proxy (Python 3.12):
 ```bash
 # If .venv-uzu is not already initialized:
-# uv venv .venv-uzu --python 3.12 && uv pip install --python .venv-uzu/bin/python uzu
+# uv venv .venv-uzu --python 3.12 && uv pip install --python .venv-uzu/bin/python uzu uvicorn fastapi
 MODEL=trymirai/Muse-Glimmer-30B-M ./scripts/start_uzu_proxy.sh
 ```
 
