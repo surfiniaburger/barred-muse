@@ -170,6 +170,27 @@ See [`RESULTS.md`](RESULTS.md) for the before/after comparison showing how the d
 
 ---
 
+## Benchmark Ground Truth & Canonical Ledger
+
+[`reports/BARRED_Track_1_Canonical_Ledger.csv`](reports/BARRED_Track_1_Canonical_Ledger.csv) is the human-adjudicated ground-truth for all 50 seeds (IDs 42–91) evaluated during the hackathon period:
+
+| Verdict | Count | Description |
+| :--- | :---: | :--- |
+| `proved_safe` | **20** | Deterministic AST proof confirmed the fix is correct |
+| `confirmed_vulnerable` | **22** | Fix is insufficient or exploitable; model should output `BLOCKED` or `UNRESOLVED` |
+| `context_deficient` | **8** | Seeds 45, 49, 54, 56, 60, 70, 74, 91 — insufficient source context for proof either way; correct system behavior is epistemic abstention (`UNRESOLVED`) |
+
+The 8 context-deficient seeds represent BARRED's honest epistemic boundary: the system abstains rather than hallucinating a verdict.
+
+Run the confusion matrix evaluator against any batch attempt log:
+```bash
+uv run python cli.py eval --attempts evidence_pack/m9bol_gate_smoke_v10_attempts.jsonl
+```
+
+See [`RESULTS.md`](RESULTS.md) for the before/after comparison showing how the deterministic gate eliminates baseline hallucinations.
+
+---
+
 ## Live Evidence Pack
 
 - **Audit Trace**: [`evidence_pack/audit_m9bol_gate_smoke_v10.json`](evidence_pack/audit_m9bol_gate_smoke_v10.json)
@@ -178,11 +199,3 @@ See [`RESULTS.md`](RESULTS.md) for the before/after comparison showing how the d
 - **Factorial Corpus**: [`evidence_pack/corpus_gateol_smoke_v10.jsonl`](evidence_pack/corpus_gateol_smoke_v10.jsonl)
 
 ---
-
-## 3-Minute Presentation Walkthrough
-
-- **0:00 – 0:30 (The Hook):** Contrast standard IDE security disclaimers (*"AI coding agents have limitations; verify all actions"*) with mission-critical security demands.
-- **0:30 – 1:15 (The Supported Case):** Run `python cli.py demo --offline` (or inspect live Seed 42). Show Meta Muse-Glimmer-30B selecting candidate `C1` and the AST gate mathematically proving dominance (`PASS`).
-- **1:15 – 2:00 (The Contrast Case):** Show Seed 43 Round 0. The model attempts a plausible ungrounded claim; show the deterministic gate catching and blocking it cold (`BLOCKED`).
-- **2:00 – 2:30 (The Honest Boundary):** Show Seed 43 Round 1. Under reflection, Muse Glimmer concedes and cleanly abstains (`UNRESOLVED`), demonstrating true epistemic safety.
-- **2:30 – 3:00 (Conclusion):** Emphasize how pairing Meta models with deterministic evidence gates creates verifiable AI security reviews that replace vague disclaimers with mathematical proof.
