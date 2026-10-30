@@ -90,6 +90,12 @@ Render the human-readable tri-state decision cards directly from the live attemp
 uv run python cli.py inspect artifacts/attempts/gateol-smoke-v10.jsonl
 ```
 
+#### Evaluate Benchmark Ground Truth & Confusion Matrix:
+Evaluate any batch attempt log against the canonical ground-truth ledger ([`reports/BARRED_Track_1_Canonical_Ledger.csv`](reports/BARRED_Track_1_Canonical_Ledger.csv)) to render the 2x2 confusion matrix and epistemic boundary metrics:
+```bash
+uv run python cli.py eval --attempts evidence_pack/m9bol_gate_smoke_v10_attempts.jsonl
+```
+
 ---
 
 ## Detailed Explanation of Pipeline Flags

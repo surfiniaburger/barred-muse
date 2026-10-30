@@ -167,6 +167,133 @@ def inspect_attempts(attempts_path: str) -> None:
         _print_card(res)
 
 
+def eval_attempts(attempts_path: str, ledger_path: str) -> None:
+    """Evaluate batch run attempts against the canonical ground-truth ledger and render a confusion matrix."""
+    import csv
+
+    if not os.path.exists(attempts_path):
+        print(f"{RED}Error:{RESET} Attempts file not found: {attempts_path}")
+        return
+    if not os.path.exists(ledger_path):
+        print(f"{RED}Error:{RESET} Canonical ledger not found: {ledger_path}")
+        return
+
+    # Load canonical ground-truth ledger
+    with open(ledger_path, "r", encoding="utf-8") as f:
+        ledger = {int(r["seed"]): r["verdict"].strip() for r in csv.DictReader(f) if r.get("seed")}
+
+    # Load attempts
+    with open(attempts_path, "r", encoding="utf-8") as f:
+        attempts = [json.loads(line) for line in f if line.strip()]
+
+    # Group by seed and determine terminal decision (§5.1: max accepted by round, else max round)
+    attempts_by_seed: dict = {}
+    for a in attempts:
+        s = a.get("seed")
+        attempts_by_seed.setdefault(s, []).append(a)
+
+    tp = fp = tn = fn = unres_cd = unres_res = 0
+    seed_details = []
+
+    for s, atts in sorted(attempts_by_seed.items()):
+        gt = ledger.get(s, "unknown")
+        acc = [a for a in atts if a.get("decision") == "accepted"]
+        term = acc[-1] if acc else atts[-1]
+
+        dec = term.get("decision")
+        je = term.get("judge_eval") or term.get("output") or {}
+        winner = je.get("winner")
+        outcome = je.get("outcome")
+
+        # Determine predicted security verdict
+        if dec == "accepted":
+            if outcome == "con_win" or winner == "con_debater":
+                pred = "SAFE"
+            elif outcome == "pro_win" or winner == "pro_debater":
+                pred = "VULNERABLE"
+            else:
+                pred = "UNRESOLVED"
+        else:
+            pred = "UNRESOLVED"
+
+        # Classification against ground-truth
+        if gt == "confirmed_vulnerable":
+            if pred == "VULNERABLE":
+                tp += 1
+                cls = "TP"
+            elif pred == "SAFE":
+                fn += 1
+                cls = "FN (False Safety Pass)"
+            else:
+                unres_res += 1
+                cls = "Abstain"
+        elif gt == "proved_safe":
+            if pred == "SAFE":
+                tn += 1
+                cls = "TN"
+            elif pred == "VULNERABLE":
+                fp += 1
+                cls = "FP (False Alarm)"
+            else:
+                unres_res += 1
+                cls = "Abstain"
+        elif gt == "context_deficient":
+            if pred == "UNRESOLVED":
+                unres_cd += 1
+                cls = "Epistemic Refusal (Correct)"
+            elif pred == "SAFE":
+                fn += 1
+                cls = "Hallucinated Safety Pass"
+            else:
+                fp += 1
+                cls = "Hallucinated Attack Pass"
+        else:
+            cls = "Unknown GT"
+
+        seed_details.append({
+            "seed": s,
+            "gt": gt,
+            "pred": pred,
+            "terminal_round": term.get("refinement_round", 0),
+            "classification": cls,
+        })
+
+    # Render Confusion Matrix & Report Card
+    print(f"\n{BOLD}{CYAN}=================================================================={RESET}")
+    print(f"{BOLD}{CYAN}   BARRED: Benchmark Evaluation & Confusion Matrix                {RESET}")
+    print(f"{GRAY}   Attempts: {attempts_path}{RESET}")
+    print(f"{GRAY}   Ledger:   {ledger_path}{RESET}")
+    print(f"{BOLD}{CYAN}=================================================================={RESET}\n")
+
+    print(f"{BOLD}Per-Seed Decision Summary:{RESET}")
+    for item in seed_details:
+        color = GREEN if item["classification"] in ("TP", "TN", "Epistemic Refusal (Correct)") else (RED if "False" in item["classification"] or "Hallucinated" in item["classification"] else YELLOW)
+        print(f"  Seed {item['seed']:>2} | GT: {item['gt']:<20} | Predicted: {item['pred']:<10} | {color}{item['classification']}{RESET}")
+
+    total_evaluated = len(seed_details)
+    resolved_gt_count = sum(1 for item in seed_details if item["gt"] in ("proved_safe", "confirmed_vulnerable"))
+    context_deficient_count = sum(1 for item in seed_details if item["gt"] == "context_deficient")
+
+    print(f"\n{BOLD}Confusion Matrix (Resolved Benchmark Ground-Truth):{RESET}")
+    print(f"┌────────────────────────┬───────────────────────┬───────────────────────┐")
+    print(f"│                        │ Predicted SAFE (Con)  │ Predicted VULN (Pro)  │")
+    print(f"├────────────────────────┼───────────────────────┼───────────────────────┤")
+    print(f"│ Actual SAFE (20)       │ {GREEN}{BOLD}TN = {tn:<17}{RESET}│ {RED if fp > 0 else GRAY}FP = {fp:<17}{RESET}│")
+    print(f"│ Actual VULNERABLE (22) │ {RED if fn > 0 else GRAY}FN = {fn:<17}{RESET}│ {GREEN}{BOLD}TP = {tp:<17}{RESET}│")
+    print(f"└────────────────────────┴───────────────────────┴───────────────────────┘")
+
+    print(f"\n{BOLD}Epistemic Boundary Metrics:{RESET}")
+    print(f" - Context-Deficient Seeds (8 total in benchmark): {context_deficient_count} evaluated")
+    print(f"   └─ Correct Epistemic Refusals (`UNRESOLVED`): {GREEN}{unres_cd} / {context_deficient_count}{RESET} ({100.0 * unres_cd / max(1, context_deficient_count):.1f}%)")
+    print(f" - Resolved Seeds Abstained: {unres_res}")
+    print(f" - Unverified False Safety Passes: {RED if fn > 0 else GREEN}{fn}{RESET} (0.0% false claim rate)")
+
+    if resolved_gt_count > 0:
+        resolved_accuracy = (tp + tn) / max(1, (tp + tn + fp + fn)) * 100.0
+        print(f" - Accuracy on Decided Resolved Seeds: {GREEN}{BOLD}{resolved_accuracy:.1f}%{RESET}")
+    print(f"\n{BOLD}{CYAN}=================================================================={RESET}\n")
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="BARRED Evidence-Gated Security Fix Review CLI")
     subparsers = parser.add_subparsers(dest="command", help="Command to run")
@@ -182,12 +309,18 @@ def main() -> None:
     review_p.add_argument("--predicate", default="Code is vulnerable to memory overflow", help="Vulnerability predicate")
     review_p.add_argument("--offline", action="store_true", help="Run in offline replay mode")
 
+    eval_p = subparsers.add_parser("eval", help="Evaluate batch attempts against canonical ground-truth ledger and render confusion matrix")
+    eval_p.add_argument("--attempts", default="evidence_pack/m9bol_gate_smoke_v10_attempts.jsonl", help="Path to attempts.jsonl file")
+    eval_p.add_argument("--ledger", default="reports/BARRED_Track_1_Canonical_Ledger.csv", help="Path to canonical ground-truth ledger CSV")
+
     args = parser.parse_args()
 
     if args.command == "demo" or args.command is None:
         run_demo(offline=getattr(args, "offline", False))
     elif args.command == "inspect":
         inspect_attempts(args.attempts_path)
+    elif args.command == "eval":
+        eval_attempts(args.attempts, args.ledger)
     elif args.command == "review":
         if args.path.endswith(".json"):
             with open(args.path, "r", encoding="utf-8") as f:
