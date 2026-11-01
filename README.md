@@ -155,9 +155,10 @@ In baseline unconstrained multi-agent debate runs, models routinely suffered fro
 
 | Verdict | Count | Description |
 | :--- | :---: | :--- |
-| `proved_safe` | **20** | Deterministic AST proof confirmed the fix is correct |
-| `confirmed_vulnerable` | **22** | Fix is insufficient or exploitable; model should output `BLOCKED` or `UNRESOLVED` |
-| `context_deficient` | **8** | Seeds 45, 49, 54, 56, 60, 70, 74, 91 — insufficient source context for proof either way; correct system behavior is epistemic abstention (`UNRESOLVED`) |
+| `proved_safe` | **13** | Deterministic AST proof confirmed the fix is correct |
+| `confirmed_vulnerable` | **11** | Fix is insufficient or exploitable; model should output `BLOCKED` or `UNRESOLVED` |
+| `context_deficient` | **16** | Insufficient source context for proof either way; correct system behavior is epistemic abstention (`UNRESOLVED`) |
+| `ambiguous` | **10** | Seeds where ground-truth verdict is ambiguous; system should abstain |
 
 The 8 context-deficient seeds represent BARRED's honest epistemic boundary: the system abstains rather than hallucinating a verdict.
 
@@ -176,9 +177,10 @@ See [`RESULTS.md`](RESULTS.md) for the before/after comparison showing how the d
 
 | Verdict | Count | Description |
 | :--- | :---: | :--- |
-| `proved_safe` | **20** | Deterministic AST proof confirmed the fix is correct |
-| `confirmed_vulnerable` | **22** | Fix is insufficient or exploitable; model should output `BLOCKED` or `UNRESOLVED` |
-| `context_deficient` | **8** | Seeds 45, 49, 54, 56, 60, 70, 74, 91 — insufficient source context for proof either way; correct system behavior is epistemic abstention (`UNRESOLVED`) |
+| `proved_safe` | **13** | Deterministic AST proof confirmed the fix is correct |
+| `confirmed_vulnerable` | **11** | Fix is insufficient or exploitable; model should output `BLOCKED` or `UNRESOLVED` |
+| `context_deficient` | **16** | Insufficient source context for proof either way; correct system behavior is epistemic abstention (`UNRESOLVED`) |
+| `ambiguous` | **10** | Seeds where ground-truth verdict is ambiguous; system should abstain |
 
 The 8 context-deficient seeds represent BARRED's honest epistemic boundary: the system abstains rather than hallucinating a verdict.
 
